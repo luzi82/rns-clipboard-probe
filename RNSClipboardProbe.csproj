@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <Version>2.2.0</Version>
+    <Authors>luzi82</Authors>
+    <RepositoryUrl>https://github.com/luzi82/rns-clipboard-probe</RepositoryUrl>
+    <PathMap>$(MSBuildProjectDirectory)=/_/rns-clipboard-probe</PathMap>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <EnableDiagnostics Condition="'$(EnableDiagnostics)' == ''">false</EnableDiagnostics>
+    <DefineConstants Condition="'$(EnableDiagnostics)' == 'true'">$(DefineConstants);PROBE_DIAGNOSTICS</DefineConstants>
+    <AssemblyName>RNSClipboardProbe</AssemblyName>
+    <RootNamespace>RNSClipboardProbe</RootNamespace>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RNSReloadedInterfacesDll Condition="'$(RNSReloadedInterfacesDll)' == '' AND Exists('$(MSBuildThisFileDirectory)../Reload II 1.31.0 Release/Mods/RNSReloaded/RNSReloaded.Interfaces.dll')">$(MSBuildThisFileDirectory)../Reload II 1.31.0 Release/Mods/RNSReloaded/RNSReloaded.Interfaces.dll</RNSReloadedInterfacesDll>
+    <RNSReloadedRepo Condition="'$(RNSReloadedRepo)' == '' AND '$(RNSReloadedInterfacesDll)' == '' AND Exists('$(MSBuildThisFileDirectory)../RNSReloaded/RNSReloaded.Interfaces/RNSReloaded.Interfaces.csproj')">$(MSBuildThisFileDirectory)../RNSReloaded</RNSReloadedRepo>
+    <RNSReloadedInterfacesDll Condition="'$(RNSReloadedInterfacesDll)' == ''">$(RELOADEDIIMODS)/RNSReloaded/RNSReloaded.Interfaces.dll</RNSReloadedInterfacesDll>
+    <UseRnsProject Condition="'$(RNSReloadedRepo)' != ''">true</UseRnsProject>
+    <UseRnsDll Condition="'$(UseRnsProject)' != 'true' AND Exists('$(RNSReloadedInterfacesDll)')">true</UseRnsDll>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="tests/**/*.cs;backups/**/*.cs;dist/**/*.cs;.packaging/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EnableDiagnostics)' != 'true'">
+    <Compile Remove="Listen.cs;SampleDump.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Reloaded.Mod.Interfaces" Version="2.4.0" ExcludeAssets="runtime" />
+    <PackageReference Include="Reloaded.Hooks.Definitions" Version="1.15.0" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseRnsProject)' == 'true'">
+    <ProjectReference Include="$(RNSReloadedRepo)/RNSReloaded.Interfaces/RNSReloaded.Interfaces.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseRnsDll)' == 'true'">
+    <Reference Include="RNSReloaded.Interfaces">
+      <HintPath>$(RNSReloadedInterfacesDll)</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="ModConfig.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="LICENSE">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <Target Name="EnsureRnsReference" BeforeTargets="ResolveProjectReferences">
+    <Error
+      Condition="'$(UseRnsProject)' != 'true' AND '$(UseRnsDll)' != 'true'"
+      Text="This project does not vendor RNSReloaded. Pass -p:RNSReloadedRepo=path\to\a\checkout\of\https://github.com/NotNite/RNSReloaded (the folder that contains RNSReloaded.Interfaces), or -p:RNSReloadedInterfacesDll=path\to\RNSReloaded.Interfaces.dll from the installed mod." />
+  </Target>
+</Project>

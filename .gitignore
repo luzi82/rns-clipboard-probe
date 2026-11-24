@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/__pycache__/
+backups/
+dist/
+.packaging/
+samples/
+.vs/
+.vscode/
+*.user
+*.suo
+*.log
