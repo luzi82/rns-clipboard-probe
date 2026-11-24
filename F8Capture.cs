@@ -20,7 +20,7 @@ internal static class F8Capture {
         var language = languageIndex >= 0 ? (int)(Num("global.config[" + languageIndex + "]") ?? -1) : -1;
         if (language is < 0 or > 5) {
             var label = Text("global.languageMap[?\"menuoptions_language\"]");
-            language = Enumerable.Range(0, 6).FirstOrDefault(i => catalog.Phrase("menuoptions_language", i) == label, 0);
+            language = Enumerable.Range(0, 6).FirstOrDefault(i => label.Length > 0 && catalog.Phrase("menuoptions_language", i) == label, 0);
         }
         var difficultyIndex = FindIndex("obj_save_manager.saveInfoKey", "difficulty_v2");
         var difficulty = difficultyIndex < 0 ? null : Num("global.saveInfo[" + difficultyIndex + "]");

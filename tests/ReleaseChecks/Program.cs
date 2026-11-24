@@ -12,7 +12,7 @@ var temp = Path.Combine(Path.GetTempPath(), "rns-clipboard-probe-tests-" + Guid.
 Directory.CreateDirectory(temp);
 try {
     void Csv(string file, string rows, bool level = true) => File.WriteAllText(Path.Combine(temp, file),
-        (level ? "key,level,English,Japanese,Chinese\n" : "key,English,Japanese,Chinese\n") + rows);
+        (level ? "key,level,English,Japanese,Chinese,Korean,Ukrainian,French\n" : "key,English,Japanese,Chinese,Korean,Ukrainian,French\n") + rows);
     Csv("Names_Move.csv", "mv_demo_0,0,Demo Strike,,测试攻击\nmv_demo_0_sapphire,0,Sapphire Demo Strike,,蓝宝石测试攻击\n");
     Csv("Descriptions_Move.csv", "mv_demo_0,0,Deals [STR] damage. [CHARGES] an ability.,,造成[STR]伤害。[CHARGES]技能。\nmv_demo_0_sapphire,0,Grants [ASTRA] for [VAR0_SECONDS].,,给予[VAR0_SECONDS]的[ASTRA]。\n");
     Csv("Names_Item.csv", "it_demo,0,Demo Relic,,测试道具\nit_other,0,Other Relic,,另一道具\n");
@@ -83,6 +83,29 @@ try {
         try { QuerySyntax.Parse(invalid); } catch (FormatException) { rejected = true; }
         Check(rejected, "Reject invalid query: " + invalid);
     }
+    // All six locales must use CSV labels where available and local mod labels elsewhere.
+    var csvKeys = new[] { "weapontype_primary", "itemtype_ability", "menuinp_items", "talkact_shop", "weapontype_loot", "menumod_sheet_hbs", "infodraw_short_header", "infodraw_strength_sm", "infodraw_strength", "infodraw_gcd", "infodraw_maxstock" };
+    foreach (var key in csvKeys) File.AppendAllText(Path.Combine(temp, "Strings.csv"), key + "," + string.Join(",", Enumerable.Range(0, 6).Select(i => "CSV_" + i + "_" + key)) + "\n");
+    File.AppendAllText(Path.Combine(temp, "Strings.csv"), "weapontype_secondary,English fallback,,,,,\n");
+    File.AppendAllText(Path.Combine(temp, "Strings.csv"), "infodraw_short_cooldown," + string.Join(",", Enumerable.Range(0, 6).Select(i => "CSV_" + i + "_cooldown: amNums")) + "\n");
+    File.AppendAllText(Path.Combine(temp, "Strings.csv"), "infodraw_short_numsec,numSecs,numSec秒,numSec秒,numSec초,numSec с,numSecs\n");
+    var localizedCatalog = new F8Catalog(temp);
+    for (var lang = 0; lang < 6; lang++) {
+        numbers["global.config[0]"] = lang;
+        var localizedRun = F8Capture.Capture(source, localizedCatalog);
+        localizedRun.Carried.Add(new F8Entry { Key = "it_heavens_codex", Counter = 3, OtherFace = new F8Entry { Key = "it_hells_codex" } });
+        var localized = new F8Renderer(localizedCatalog).Render(localizedRun);
+        Check(localized.Contains("CSV_" + lang + "_weapontype_primary") && localized.Contains("CSV_" + lang + "_infodraw_short_header"), "CSV ability labels and adjusted header: " + lang);
+        Check(localized.Contains("CSV_" + lang + "_cooldown 0.25"), "CSV template label is reused without leaking placeholders: " + lang);
+        Check(localized.Contains(F8Labels.Fallback("base", lang)) && localized.Contains(F8Labels.Fallback("counterUnverified", lang)), "Mod-specific labels use the active language: " + lang);
+        Check(F8Labels.Get(localizedCatalog, "secondary", lang) == "English fallback", "Missing CSV translation falls back to English: " + lang);
+        if (lang != 2) Check(!new[] { "基础数值", "调整数值", "当前可用次数", "售价", "目前形态", "另一形态", "升级后技能", "说明不可用", "尚未验证" }.Any(localized.Contains), "No Chinese UI leakage: " + lang);
+    }
+    Check(F8Labels.Seconds(400, 3, localizedCatalog) == "0.4초" && F8Labels.Seconds(400, 4, localizedCatalog) == "0.4 с", "Korean and Ukrainian CSV time units");
+    Check(F8Labels.Times(2, 1) == "2回" && F8Labels.Times(2, 3) == "2회" && F8Labels.Times(2, 5) == "2 fois", "Localized counts");
+    numbers["global.config[0]"] = 99;
+    Check(F8Capture.Capture(source, localizedCatalog).Language == 0, "Unknown language with no UI label falls back to English");
+    Check(F8Labels.Fallback("base", -1) == "Base" && F8Labels.Fallback("base", 6) == "Base", "Invalid renderer locales use English");
     if (args.Length > 0) {
         using var pe = new PEReader(File.OpenRead(args[0]));
         var reader = pe.GetMetadataReader();

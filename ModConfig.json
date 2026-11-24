@@ -2,7 +2,7 @@
   "ModId": "RNSClipboardProbe",
   "ModName": "RNS Clipboard Probe",
   "ModAuthor": "luzi82",
-  "ModVersion": "2.2.0",
+  "ModVersion": "2.2.1",
   "ModDescription": "Read-only. F8 copies bilingual skills, carried items, shop/loot choices, gem previews, statuses, difficulty and HP/max HP.",
   "ModDll": "RNSClipboardProbe.dll",
   "ModIcon": "",

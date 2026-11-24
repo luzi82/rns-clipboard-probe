@@ -8,7 +8,7 @@ The mod copies text locally. It does not contact an AI service or send game data
 
 1. Set up [Reloaded-II](https://github.com/Reloaded-Project/Reloaded-II) for Rabbit and Steel.
 2. Install and enable [RNSReloaded](https://github.com/NotNite/RNSReloaded) and its required dependencies. This mod was built against RNSReloaded 1.1.23.
-3. Close the game. Extract `rns-clipboard-probe-2.2.0.zip` into Reloaded-II's `Mods` directory. The resulting folder should be `Mods/RNSClipboardProbe/`, containing `ModConfig.json` and `RNSClipboardProbe.dll`.
+3. Close the game. Extract `rns-clipboard-probe-2.2.1.zip` into Reloaded-II's `Mods` directory. The resulting folder should be `Mods/RNSClipboardProbe/`, containing `ModConfig.json` and `RNSClipboardProbe.dll`.
 4. Enable **RNS Clipboard Probe** and launch the game through Reloaded-II.
 5. Open a shop or loot selection, press **F8**, and paste the clipboard into your AI chat.
 
@@ -23,7 +23,7 @@ The release build has **F9 disabled**, **no TCP listener**, and **no screenshot/
 - Both faces of transforming items, grouped as one choice with the current slot form identified.
 - Emphasized special terms such as *CHARGES* and *ASTRA*, with related status explanations.
 
-Names and descriptions include the game's original English text alongside the active language. English mode prints English once. Each ability has a complete active-language block followed by an English block, each with both stat groups. Description placeholders use base values; adjusted values are listed separately.
+Names and descriptions include the game's original English text alongside the active language. English mode prints English once. Clipboard labels reuse the game’s UI CSV translations; mod-specific labels have an English, Japanese, Chinese, Korean, Ukrainian and French translation table, with English fallback. Each ability has a complete active-language block followed by an English block, each with both stat groups. Description placeholders use base values; adjusted values are listed separately.
 
 ## Current limits
 

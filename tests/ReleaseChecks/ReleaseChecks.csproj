@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../F8Report.cs" Link="F8Report.cs" />
+    <Compile Include="../../F8Labels.cs" Link="F8Labels.cs" />
     <Compile Include="../../F8Capture.cs" Link="F8Capture.cs" />
     <Compile Include="../../QuerySyntax.cs" Link="QuerySyntax.cs" />
   </ItemGroup>

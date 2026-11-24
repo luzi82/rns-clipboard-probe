@@ -138,10 +138,11 @@ internal sealed class F8Renderer(F8Catalog catalog) {
     private readonly Dictionary<string, string> usedStatuses = new(StringComparer.Ordinal);
     private int language;
     private bool EnglishOnly => language == 0;
-    private static readonly string[] Roles = ["主技能", "辅技能", "特殊技能", "防御技能"];
-    private static readonly string[] EnglishRoles = ["Primary", "Secondary", "Special", "Defensive"];
+    private static readonly string[] RoleKeys = ["primary", "secondary", "special", "defensive"];
     internal static string Number(double n) => n.ToString("0.########", CultureInfo.InvariantCulture);
-    internal static string Seconds(double ms, int lang) => (ms / 1000).ToString("0.0###", CultureInfo.InvariantCulture) + (lang == 0 ? "s" : "秒");
+    internal static string Seconds(double ms, int lang) => F8Labels.Seconds(ms, lang);
+    private string Time(double ms, int lang) => F8Labels.Seconds(ms, lang, catalog);
+    private string Label(string id, int? lang = null) => F8Labels.Get(catalog, id, lang ?? language);
     private static string Clean(string text) => text.Replace("#", "\n").Replace("\r\n", "\n").Replace("{", "").Replace("}", "").Trim();
     private string Pair(string local, string english) => EnglishOnly || local.Length == 0 || local == english ? english : english.Length == 0 ? local : local + " / " + english;
     private string Name(F8Entry entry, int lang) {
@@ -150,9 +151,8 @@ internal sealed class F8Renderer(F8Catalog catalog) {
         return name.Length > 0 ? name : entry.Key;
     }
     private string Name(F8Entry entry) => Pair(Name(entry, language), Name(entry, 0));
-    private string Heading(string local, string english) => EnglishOnly ? english : local;
     public string Render(F8Run run) {
-        language = run.Language;
+        language = F8Labels.Language(run.Language);
         usedStatuses.Clear();
         var sb = new StringBuilder();
         sb.Append("HP: ").Append(run.Hp is double hp ? Number(hp) : "?");
@@ -165,13 +165,13 @@ internal sealed class F8Renderer(F8Catalog catalog) {
         var stage = Pair(catalog.Phrase(run.StageKey, language), catalog.Phrase(run.StageKey, 0)).Replace("#", " ");
         if (run.Stage != null || stage.Length > 0) sb.Append("Stage: ").Append(run.Stage?.ToString(CultureInfo.InvariantCulture) ?? "?").Append(stage.Length > 0 ? " / " + stage : "").AppendLine();
         if (run.Difficulty is int d) sb.Append("Difficulty: ").AppendLine(Pair(catalog.Phrase("menuchar_difficulty_" + d, language), catalog.Phrase("menuchar_difficulty_" + d, 0)));
-        sb.AppendLine().Append("## ").AppendLine(Heading("技能", "Abilities")).AppendLine();
+        sb.AppendLine().Append("## ").AppendLine(Label("abilities")).AppendLine();
         foreach (var skill in run.Skills) Skill(sb, skill, false);
-        Section(sb, "已携带道具", "Carried items", run.Carried, true, false);
-        if (run.ShopOpen) Section(sb, "商店", "Shop", run.Shop, false, true);
-        if (run.LootOpen) Section(sb, "战利品选项", "Loot choices", run.Loot, false, false);
+        Section(sb, "carried", run.Carried, true, false);
+        if (run.ShopOpen) Section(sb, "shop", run.Shop, false, true);
+        if (run.LootOpen) Section(sb, "loot", run.Loot, false, false);
         if (usedStatuses.Count > 0) {
-            sb.Append("## ").AppendLine(Heading("特殊状态说明", "Special statuses")).AppendLine();
+            sb.Append("## ").AppendLine(Label("statuses")).AppendLine();
             foreach (var (key, token) in usedStatuses.ToArray()) {
                 var local = catalog.StatusName(key, language);
                 var en = catalog.StatusName(key, 0);
@@ -182,30 +182,30 @@ internal sealed class F8Renderer(F8Catalog catalog) {
         }
         return sb.ToString().TrimEnd() + Environment.NewLine;
     }
-    private void Section(StringBuilder sb, string local, string english, List<F8Entry> entries, bool carried, bool prices) {
-        sb.Append("## ").AppendLine(Heading(local, english)).AppendLine();
-        if (entries.Count == 0) sb.AppendLine(Heading("（无）", "(none)")).AppendLine();
+    private void Section(StringBuilder sb, string heading, List<F8Entry> entries, bool carried, bool prices) {
+        sb.Append("## ").AppendLine(Label(heading)).AppendLine();
+        if (entries.Count == 0) sb.AppendLine(Label("none")).AppendLine();
         foreach (var entry in entries) {
             sb.Append("### ").AppendLine(Name(entry)).AppendLine();
-            if (prices && entry.Price is double price) sb.Append(Heading("售价: ", "Price: ")).Append(Number(price)).AppendLine(Heading(" 金粒", " gold")).AppendLine();
-            if (entry.OtherFace != null) sb.Append(Heading(carried ? "目前形态: " : "当前槽位形态: ", carried ? "Current form: " : "Current slot form: ")).AppendLine(Name(entry)).AppendLine();
+            if (prices && entry.Price is double price) sb.Append(Label("price")).Append(": ").Append(Number(price)).Append(' ').AppendLine(Label("goldUnit")).AppendLine();
+            if (entry.OtherFace != null) sb.Append(Label(carried ? "currentForm" : "slotForm")).Append(": ").AppendLine(Name(entry)).AppendLine();
             // Captures establish the current value, but not yet its countdown direction.
             if (carried && entry.Key is "it_heavens_codex" or "it_hells_codex" && entry.Counter is double count)
-                sb.Append(Heading("形态计数: ", "Form counter: ")).Append(Number(count)).AppendLine(Heading("（尚未验证是否为剩余技能次数）", " (remaining ability-use meaning unverified)")).AppendLine();
+                sb.Append(Label("formCounter")).Append(": ").Append(Number(count)).Append(' ').AppendLine(Label("counterUnverified")).AppendLine();
             Description(sb, entry);
             if (entry.OtherFace is F8Entry other) {
-                sb.Append("#### ").Append(Heading("另一形态: ", "Other form: ")).AppendLine(Name(other)).AppendLine();
+                sb.Append("#### ").Append(Label("otherForm")).Append(": ").AppendLine(Name(other)).AppendLine();
                 Description(sb, other);
             }
             if (entry.Upgrade is F8Entry upgrade) {
-                sb.Append("#### ").AppendLine(Heading("升级后技能", "Upgraded ability")).AppendLine();
+                sb.Append("#### ").AppendLine(Label("upgradedAbility")).AppendLine();
                 Skill(sb, upgrade, true);
             }
         }
     }
     private void Skill(StringBuilder sb, F8Entry entry, bool preview) {
         var slot = Math.Clamp(entry.Slot, 0, 3);
-        sb.Append(preview ? "##### " : "### ").Append(EnglishOnly ? EnglishRoles[slot] : Roles[slot]).Append(": ").AppendLine(Name(entry)).AppendLine();
+        sb.Append(preview ? "##### " : "### ").Append(Label(RoleKeys[slot])).Append(": ").AppendLine(Name(entry)).AppendLine();
         foreach (var lang in EnglishOnly ? new[] { 0 } : new[] { language, 0 }) {
             if (!preview && entry.AdjustedCd != null) Stats(sb, entry, lang, true);
             Stats(sb, entry, lang, false);
@@ -213,14 +213,15 @@ internal sealed class F8Renderer(F8Catalog catalog) {
         }
     }
     private static double At(double[] a, int i) => i < a.Length ? a[i] : 0;
-    private static void Stats(StringBuilder sb, F8Entry entry, int lang, bool adjusted) {
+    private void Stats(StringBuilder sb, F8Entry entry, int lang, bool adjusted) {
         var cd = adjusted ? entry.AdjustedCd ?? entry.Cd : entry.Cd;
         var damage = adjusted ? entry.Damage ?? At(entry.AdjustedHb ?? entry.Hb, 4) : At(entry.Hb, 4);
-        sb.Append(lang == 0 ? adjusted ? "(Adjusted) Damage " : "(Base) Damage " : adjusted ? "(调整数值) 伤害 " : "(基础数值) 基础伤害 ")
-            .Append(Number(damage)).Append(lang == 0 ? "  Cooldown " : "  冷却 ").Append(Seconds(At(cd, 1), lang))
-            .Append(lang == 0 ? "  Global cooldown " : "  全局冷却 ").Append(Seconds(At(cd, 2), lang))
-            .Append(lang == 0 ? "  Max uses " : "  次数上限 ").AppendLine(Number(At(cd, 6)));
-        if (adjusted && entry.Stock is double stock) sb.Append(lang == 0 ? "Remaining uses: " : "当前可用次数: ").AppendLine(Number(stock));
+        sb.Append('(').Append(Label(adjusted ? "adjusted" : "base", lang)).Append(") ")
+            .Append(Label(adjusted ? "damage" : "baseDamage", lang)).Append(' ').Append(Number(damage))
+            .Append("  ").Append(Label(adjusted ? "cooldown" : "baseCooldown", lang)).Append(' ').Append(Time(At(cd, 1), lang))
+            .Append("  ").Append(Label("gcd", lang)).Append(' ').Append(Time(At(cd, 2), lang))
+            .Append("  ").Append(Label("maxUses", lang)).Append(' ').AppendLine(Number(At(cd, 6)));
+        if (adjusted && entry.Stock is double stock) sb.Append(Label("remainingUses", lang)).Append(": ").AppendLine(Number(stock));
     }
     private void Description(StringBuilder sb, F8Entry entry) {
         if (!EnglishOnly) sb.AppendLine(Description(entry, language)).AppendLine();
@@ -229,7 +230,7 @@ internal sealed class F8Renderer(F8Catalog catalog) {
     private string Description(F8Entry entry, int lang) {
         var template = catalog.Description(entry.Key, lang);
         if (template.Length == 0 && lang == language) template = entry.LiveTemplate;
-        if (template.Length == 0) return lang == 0 ? "(Description unavailable)" : "（说明不可用）";
+        if (template.Length == 0) return Label("missingDescription", lang);
         // Description numbers are explicitly the base data; adjusted values are separate above.
         return Fill(template, entry, lang);
     }
@@ -244,8 +245,8 @@ internal sealed class F8Renderer(F8Catalog catalog) {
         if (number is double n) {
             var suffix = pieces.Length > 1 ? pieces[1] : "";
             if (suffix == "PERCENT" || token == "LUCK") return Number(n * 100) + "%";
-            if (suffix is "SECONDS" or "SECOND" || token is "CD" or "GCD" or "HBSL") return Seconds(n, lang);
-            if (suffix == "TIMES") return lang == 0 ? n == 1 ? "once" : n == 2 ? "twice" : Number(n) + " times" : Number(n) + "次";
+            if (suffix is "SECONDS" or "SECOND" || token is "CD" or "GCD" or "HBSL") return Time(n, lang);
+            if (suffix == "TIMES") return F8Labels.Times(n, lang);
             return Number(n);
         }
         var key = catalog.StatusKey(token);

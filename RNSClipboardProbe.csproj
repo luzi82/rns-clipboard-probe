@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
-    <Version>2.2.0</Version>
+    <Version>2.2.1</Version>
     <Authors>luzi82</Authors>
     <RepositoryUrl>https://github.com/luzi82/rns-clipboard-probe</RepositoryUrl>
     <PathMap>$(MSBuildProjectDirectory)=/_/rns-clipboard-probe</PathMap>
